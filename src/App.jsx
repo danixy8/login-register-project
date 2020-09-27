@@ -3,10 +3,11 @@ import {
   BrowserRouter as Router,
   Switch,
   Route
-} from "react-router-dom";
+} from 'react-router-dom';
 import Admin from './components/Admin';
 import Login from './components/Login';
 import Navbar from './components/Navbar';
+import Reset from './components/Reset';
 
 import {auth} from './firebase'
 
@@ -16,7 +17,6 @@ function App() {
 
   React.useEffect(()=>{
     auth.onAuthStateChanged(user => {
-      console.log(user);
       if(user){
         setFirebaseUser(user)
       }else{
@@ -36,6 +36,9 @@ function App() {
         </Route>
         <Route path="/admin">
           <Admin/>
+        </Route>
+        <Route path="/reset">
+          <Reset/>
         </Route>
         <Route path="/">
           Inicio...

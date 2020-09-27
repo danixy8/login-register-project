@@ -1,106 +1,163 @@
 import React from 'react'
 import {db} from '../firebase'
 
+import moment from 'moment'
+import 'moment/locale/es'
+
 const Firestore = (props) => {
 
-    const [tareas, setTareas] = React.useState([])
-    const [tarea, setTarea] = React.useState('')
-    const [modoEdicion, setModoEdicion] = React.useState(false)
-    const [id, setId] = React.useState('')
-  
-  
-    React.useEffect(() => {
-  
-      const obtenerDatos = async () => {
-  
-        try {
-  
-          const data = await db.collection(props.user.uid).get()
-          const arrayData = data.docs.map(doc => ({ id: doc.id, ...doc.data() }))
-          console.log(arrayData)
-          setTareas(arrayData)
-          
-        } catch (error) {
-          console.log(error)
+  const [tareas, setTareas] = React.useState([])
+  const [tarea, setTarea] = React.useState('')
+  const [modoEdicion, setModoEdicion] = React.useState(false)
+  const [id, setId] = React.useState('')
+
+  const [ultimo, setUltimo] = React.useState(null)
+  const [desactivar, setDesactivar] = React.useState(false)
+
+
+  React.useEffect(() => {
+
+    const obtenerDatos = async () => {
+
+      try {
+        setDesactivar(true)
+
+        const data = await db.collection(props.user.uid)
+          .limit(6)
+          .orderBy('fecha', 'desc')
+          .get()
+        const arrayData = data.docs.map(doc => ({ id: doc.id, ...doc.data() }))
+
+        setUltimo(data.docs[data.docs.length - 1])
+
+        setTareas(arrayData)
+
+        const query = await db.collection(props.user.uid)
+        .limit(6)
+        .orderBy('fecha', 'desc')
+          .startAfter(data.docs[data.docs.length - 1])
+          .get()
+        if(query.empty){
+          console.log('no hay más documentos')
+          setDesactivar(true)
+        }else{
+          setDesactivar(false)
         }
-  
-      }
-  
-      obtenerDatos()
-  
-    }, [])
-  
-    const agregar = async (e) => {
-      e.preventDefault()
-  
-      if(!tarea.trim()){
-        console.log('está vacio')
-        return
-      }
-  
-      try {
-  
-        const nuevaTarea = {
-          name: tarea,
-          fecha: Date.now()
-        }
-        const data = await db.collection(props.user.uid).add(nuevaTarea)
-  
-        setTareas([
-          ...tareas,
-          {...nuevaTarea, id: data.id}
-        ])
-  
-        setTarea('')
         
       } catch (error) {
         console.log(error)
       }
-  
-      console.log(tarea)
+
     }
-  
-    const eliminar = async (id) => {
-      try {
-        
-        await db.collection(props.user.uid).doc(id).delete()
-  
-        const arrayFiltrado = tareas.filter(item => item.id !== id)
-        setTareas(arrayFiltrado)
-  
-      } catch (error) {
-        console.log(error)
+
+    obtenerDatos()
+
+  }, [props.user.uid])
+
+  const siguiente = async() => {
+    console.log('siguiente')
+    setDesactivar(true)
+    try {
+      const data = await db.collection(props.user.uid)
+          .limit(6)
+          .orderBy('fecha', 'desc')
+          .startAfter(ultimo)
+          .get()
+      const arrayData = data.docs.map(doc => ({ id: doc.id, ...doc.data() }))
+      setTareas([
+        ...tareas,
+        ...arrayData
+      ])
+      setUltimo(data.docs[data.docs.length - 1])
+
+      const query = await db.collection(props.user.uid)
+          .limit(2)
+          .orderBy('fecha')
+          .startAfter(data.docs[data.docs.length - 1])
+          .get()
+      if(query.empty){
+        console.log('no hay más documentos')
+        setDesactivar(true)
+      }else{
+        setDesactivar(false)
       }
+
+    } catch (error) {
+      console.log(error)
     }
-  
-    const activarEdicion = (item) => {
-      setModoEdicion(true)
-      setTarea(item.name)
-      setId(item.id)
+  }
+
+  const agregar = async (e) => {
+    e.preventDefault()
+
+    if(!tarea.trim()){
+      console.log('está vacio')
+      return
     }
-  
-    const editar = async (e) => {
-      e.preventDefault()
-      if(!tarea.trim()){
-        console.log('vacio')
-        return
+
+    try {
+
+      const nuevaTarea = {
+        name: tarea,
+        fecha: Date.now()
       }
-      try {
-        
-        await db.collection(props.user.uid).doc(id).update({
-          name: tarea
-        })
-        const arrayEditado = tareas.map(item => (
-          item.id === id ? {id: item.id, fecha: item.fecha, name: tarea} : item
-        ))
-        setTareas(arrayEditado)
-        setModoEdicion(false)
-        setTarea('')
-        setId('')
-      } catch (error) {
-        console.log(error)
-      }
+      const data = await db.collection(props.user.uid).add(nuevaTarea)
+
+      setTareas([
+        ...tareas,
+        {...nuevaTarea, id: data.id}
+      ])
+
+      setTarea('')
+      
+    } catch (error) {
+      console.log(error)
     }
+
+    console.log(tarea)
+  }
+
+  const eliminar = async (id) => {
+    try {
+      
+      await db.collection(props.user.uid).doc(id).delete()
+
+      const arrayFiltrado = tareas.filter(item => item.id !== id)
+      setTareas(arrayFiltrado)
+
+    } catch (error) {
+      console.log(error)
+    }
+  }
+
+  const activarEdicion = (item) => {
+    setModoEdicion(true)
+    setTarea(item.name)
+    setId(item.id)
+  }
+
+  const editar = async (e) => {
+    e.preventDefault()
+    if(!tarea.trim()){
+      console.log('vacio')
+      return
+    }
+    try {
+      
+      await db.collection(props.user.uid).doc(id).update({
+        name: tarea
+      })
+      const arrayEditado = tareas.map(item => (
+        item.id === id ? {id: item.id, fecha: item.fecha, name: tarea} : item
+      ))
+      setTareas(arrayEditado)
+      setModoEdicion(false)
+      setTarea('')
+      setId('')
+    } catch (error) {
+      console.log(error)
+    }
+  }
 
     return (
         <div>
@@ -111,7 +168,8 @@ const Firestore = (props) => {
                         {
                         tareas.map(item => (
                             <li className="list-group-item" key={item.id}>
-                            {item.name}
+                            {item.name} - {moment(item.fecha).format('lll')}
+                            <div>
                             <button 
                                 className="btn btn-danger btn-sm float-right"
                                 onClick={() => eliminar(item.id)}
@@ -124,10 +182,18 @@ const Firestore = (props) => {
                             >
                                 Editar
                             </button>
+                            </div>
                             </li>
                         ))
                         }
                     </ul>
+                    <button 
+                    className="btn btn-info btn-block mt-2 btn-sm"
+                    onClick={() => siguiente()}
+                    disabled={desactivar}
+                    >
+                      Siguiente
+                    </button>
                 </div>
                 <div className="col-md-6">
                     <h3>

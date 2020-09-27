@@ -9,10 +9,8 @@ const Admin = (props) => {
 
     React.useEffect(() => {
         if (auth.currentUser){
-            console.log('existe un usuario')
             setUser(auth.currentUser)
         }else{
-            console.log('no existe el usuario');
             props.history.push('/login')
         }
     }, [props.history])

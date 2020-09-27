@@ -4,10 +4,10 @@ import {withRouter} from 'react-router-dom'
 
 const Login = (props) => {
 
-    const [email, setEmail] = React.useState('prueba@prueba.com')
-    const [pass, setPass] = React.useState('123456')
+    const [email, setEmail] = React.useState('')
+    const [pass, setPass] = React.useState('')
     const [error, setError] = React.useState(null)
-    const [esRegistro, setEsRegistro] = React.useState(true)
+    const [esRegistro, setEsRegistro] = React.useState(false)
 
     const procesarDatos = e => {
         e.preventDefault()
@@ -32,8 +32,7 @@ const Login = (props) => {
 
     const login = React.useCallback(async () => {
         try{
-           const res = await auth.signInWithEmailAndPassword(email, pass)
-           console.log(res.user);
+           await auth.signInWithEmailAndPassword(email, pass)
            setEmail('')
            setPass('')
            setError(null)
@@ -57,7 +56,6 @@ const Login = (props) => {
 
         try {
            const res = await auth.createUserWithEmailAndPassword(email, pass)
-           console.log(res.user);
            await db.collection('usuarios').doc(res.user.email).set({
                email: res.user.email,
                uid: res.user.uid
@@ -84,7 +82,7 @@ const Login = (props) => {
     }, [email, pass, props.history])
 
     const switching = () =>{
-        setEsRegistro(!setEsRegistro)
+        setEsRegistro(!esRegistro)
        if (esRegistro) {
            setError(null) 
        }
@@ -139,6 +137,18 @@ const Login = (props) => {
                             esRegistro ? '¿Ya estas registrado?' : '¿No tienes cuenta?'
                         } 
                         </button>
+                        {
+                            !esRegistro ? (
+                                <button 
+                                    className="btn btn-lg btn-sm btn-danger mt-2"
+                                    type="button"
+                                    onClick={() => props.history.push('/reset')}
+                                >
+                                    Recuperar Contraseña
+                                </button>
+                            ) : null
+                        }
+                        
                     </form>
                 </div>
             </div>
